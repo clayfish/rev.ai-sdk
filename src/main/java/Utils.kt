@@ -34,12 +34,14 @@ import java.net.URI
 internal object NetworkUtils {
     private const val BASE_URL = "wss://api.rev.ai/speechtotext/v1/stream"
 
-    fun handshake(sessionHandler: SessionHandler, accessToken: String, contentType: AudioContentType,
-                  params: RawParameters?, metadata: String?, customVocabularyId: String? = null,
-                  filterProfanity: Boolean = false) {
+    /**
+     * @param sessionHandler
+     * @param config
+     */
+    fun handshake(sessionHandler: SessionHandler, config: ClientConfig) {
         val client: WebSocketClient = StandardWebSocketClient()
 
-        val uri = URI(createUrl(accessToken, contentType, params, metadata, customVocabularyId, filterProfanity))
+        val uri = URI(createUrl(config))
         val headers = HttpHeaders()
         headers["host"] = uri.host
         headers["upgrade"] = "websocket"
@@ -57,18 +59,17 @@ internal object NetworkUtils {
     /**
      *
      */
-    private fun createUrl(accessToken: String, contentType: AudioContentType, params: RawParameters? = null, metadata: String? = null,
-                          customVocabularyId: String? = null, filterProfanity: Boolean = false): String {
+    private fun createUrl(config: ClientConfig): String {
 
-        var fullContentType = contentType.mime
-        if (contentType == AudioContentType.RAW) {
-            if (params == null) throw IllegalArgumentException("params cannot be null with $fullContentType.")
-            fullContentType += ";layout=${if (params.interleaved) "interleaved" else "non-interleaved"};rate=${params.rate};format=${params.format};channels=${params.channels}"
+        var fullContentType = config.contentType.mime
+        if (config.contentType == AudioContentType.RAW) {
+            if (config.params == null) throw IllegalArgumentException("params cannot be null with $fullContentType.")
+            fullContentType += ";layout=${if (config.params.interleaved) "interleaved" else "non-interleaved"};rate=${config.params.rate};format=${config.params.format};channels=${config.params.channels}"
         }
 
-        var url = "$BASE_URL?access_token=$accessToken&content_type=$fullContentType&filter_profanity=${filterProfanity}"
-        if (metadata != null) url += "&metadata=$metadata"
-        if (customVocabularyId != null) url += "&custom_vocabulary_id=$customVocabularyId"
+        var url = "$BASE_URL?access_token=${config.accessToken}&content_type=$fullContentType&filter_profanity=${config.filterProfanity}"
+        if (config.metadata != null) url += "&metadata=${config.metadata}"
+        if (config.customVocabularyId != null) url += "&custom_vocabulary_id=${config.customVocabularyId}"
 
         logger.info("Full URL: $url")
         return url

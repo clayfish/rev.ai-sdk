@@ -16,48 +16,84 @@
 
 package ai.rev.streaming
 
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+
 /**
  * Entry-point for the client projects. Handles one connection at a time. To get multiple streams, create more instances
  * of it.
  *
+ * @param clientConfig Configuration
+ *
  * @author shuklaalok7 (alok@clay.fish)
  * @since v0.1.0 2020-03-29 18:20 IST
  */
-class RevAi(private val accessToken: String, private val contentType: AudioContentType,
-            private val params: RawParameters? = null, private val metadata: String? = null,
-            private val customVocabularyId: String? = null, private val filterProfanity: Boolean = false) : AutoCloseable {
+class RevAi constructor(private val clientConfig: ClientConfig) : AutoCloseable {
     //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
-    private var sessionHandler: SessionHandler? = null
-
-    /**
-     * Establishes initial connection
-     *
-     * @param callback Handle the response obtained from rev.ai
-     */
-    fun connect(callback: (RevAiResponse) -> Unit) {
-        sessionHandler = SessionHandler(callback)
-        NetworkUtils.handshake(sessionHandler!!, accessToken, contentType, params, metadata, customVocabularyId, filterProfanity)
-    }
+    private val sessionHandler: SessionHandler = SessionHandler(clientConfig)
+    private val executor = Executors.newSingleThreadExecutor()
 
     /**
      * @param audio The audio data to send to rev.ai
      */
-    fun stream(audio: ByteArray) {
-        if (sessionHandler == null) logger.error("Session is closed, please call RevAi.connect() again.")
-        else sessionHandler?.sendAudio(audio)
+    fun stream(audio: ByteArray) = sessionHandler.sendAudio(audio)
+
+    /**
+     * @param audioStream
+     * @see ClientConfig.bufferSize
+     */
+    fun stream(audioStream: InputStream) {
+        logger.debug("Creating a separate thread to handle the audio inputStream...")
+
+        executor.execute {
+            val buffer = ByteArray(clientConfig.bufferSize)
+            var bytesRead = 0
+            while (true) {
+//                val availableBytes = audioStream.available()
+//                if (availableBytes > 0) {
+//                    logger.debug("Available bytes in the given audioStream: $availableBytes")
+                try {
+                    val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
+                    if (length > 0) {
+                        bytesRead += length
+                        logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
+                        stream(buffer.copyOfRange(0, length))
+                    }
+                } catch (e: IndexOutOfBoundsException) {
+                    logger.debug("File is not populated yet, waiting for it", e)
+                    Thread.sleep(1000)
+                }
+//                }
+                // We need analyze whether someone decided to interrupt the infinite loop.
+                if (Thread.interrupted()) {
+                    logger.warn("Terminated reading from the audio inputStream.")
+                    try {
+                        audioStream.close()
+                    } catch (e: IOException) {
+                        logger.error("Error when closing the audio inputStream.", e)
+                    }
+                }
+            }
+        }
     }
 
     /**
      * Closes connection gracefully
      */
     override fun close() {
-        // close session/connection
-        sessionHandler?.close()
-        sessionHandler = null
+        sessionHandler.close()
+        executor.shutdown()
+        try {
+            if (!executor.awaitTermination(TIMEOUT, TimeUnit.SECONDS)) executor.shutdownNow()
+        } catch (e: InterruptedException) {
+            executor.shutdownNow()
+        }
     }
 
     companion object {
         private val logger = AppUtils.getLogger<RevAi>()
+        private const val TIMEOUT = 60L // in seconds
     }
-
 }

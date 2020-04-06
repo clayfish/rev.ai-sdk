@@ -17,6 +17,47 @@
 package ai.rev.streaming
 
 /**
+ * @author shuklaalok (alok@clay.fish)
+ * @since v0.1.1 2020-04-05 9:52 AM IST
+ */
+data class ClientConfig(
+        /**
+         * Obtained from rev.ai
+         */
+        val accessToken: String,
+        val contentType: AudioContentType,
+        /**
+         * Handle the response obtained from rev.ai
+         */
+        val callback: (RevAiResponse) -> Unit,
+
+        /**
+         * Size of the buffer in bytes to read from the input-stream passed to [RevAi.stream].
+         */
+        val bufferSize: Int = 391680,
+
+        /**
+         * Needed only when [contentType] is [AudioContentType.RAW].
+         */
+        val params: RawParameters? = null,
+
+        /**
+         * Needed only when [contentType] is [AudioContentType.RAW].
+         */
+        val metadata: String? = null,
+
+        /**
+         * Any pre-existing custom-vocabulary to be used in transcription.
+         */
+        val customVocabularyId: String? = null,
+
+        /**
+         * Default is `false`. Profane words will use asterisks.
+         */
+        val filterProfanity: Boolean = false
+)
+
+/**
  * See, [rev.ai Docs](https://www.rev.ai/docs/streaming#section/WebSocket-Endpoint/Content-Type)
  * @author shuklaalok7 (alok@clay.fish)
  * @since v0.1.0 2020-03-29 06:51 PM IST

@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.sonatype.oss</groupId>
         <artifactId>oss-parent</artifactId>
-        <version>7</version>
+        <version>9</version>
     </parent>
 
-    <groupId>ai.rev</groupId>
-    <artifactId>api</artifactId>
-    <version>0.1.0</version>
+    <groupId>in.clayfish</groupId>
+    <artifactId>rev-ai-api</artifactId>
+    <version>0.1.1</version>
 
     <licenses>
         <license>
