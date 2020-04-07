@@ -90,7 +90,7 @@ data class RevAiResponse(
         val type: String?,
         val elements: List<Element>?,
         val ts: Double?,
-        val end_ts: Double?
+        val endTs: Double?
 ) {
     companion object {
         /**
@@ -101,7 +101,7 @@ data class RevAiResponse(
                 val type: String?,
                 val value: String,
                 val ts: Double?,
-                val end_ts: Double?,
+                val endTs: Double?,
                 val confidence: Double?
         )
     }

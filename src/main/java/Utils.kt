@@ -16,6 +16,7 @@
 
 package ai.rev.streaming
 
+import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -85,11 +86,11 @@ internal object NetworkUtils {
 internal object AppUtils {
     inline fun <reified T> getLogger(): Logger = LoggerFactory.getLogger(T::class.java)
 
-    // todo see what options can be tweaked
-    val gson = GsonBuilder().create()
+    val gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
 
-    fun convertToRevAiResponse(message: TextMessage): RevAiResponse {
-        // todo test it thoroughly
-        return gson.fromJson(message.payload, RevAiResponse::class.java)
-    }
+    /**
+     * @param message   [TextMessage] received from rev.ai streaming API over the websocket
+     * @return Response that this library generates
+     */
+    fun convertToRevAiResponse(message: TextMessage): RevAiResponse = gson.fromJson(message.payload, RevAiResponse::class.java)
 }
