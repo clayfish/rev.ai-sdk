@@ -51,9 +51,6 @@ class RevAi constructor(private val clientConfig: ClientConfig) : AutoCloseable 
             val buffer = ByteArray(clientConfig.bufferSize)
             var bytesRead = 0
             while (true) {
-//                val availableBytes = audioStream.available()
-//                if (availableBytes > 0) {
-//                    logger.debug("Available bytes in the given audioStream: $availableBytes")
                 try {
                     val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
                     if (length > 0) {
@@ -65,8 +62,7 @@ class RevAi constructor(private val clientConfig: ClientConfig) : AutoCloseable 
                     logger.debug("File is not populated yet, waiting for it", e)
                     Thread.sleep(1000)
                 }
-//                }
-                // We need analyze whether someone decided to interrupt the infinite loop.
+
                 if (Thread.interrupted()) {
                     logger.warn("Terminated reading from the audio inputStream.")
                     try {
