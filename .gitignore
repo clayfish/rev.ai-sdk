@@ -3,3 +3,5 @@
 *.jar
 bin/
 release.properties
+*.releaseBackup
+*.asc
