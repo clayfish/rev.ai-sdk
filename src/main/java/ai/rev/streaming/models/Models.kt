@@ -14,14 +14,13 @@
    limitations under the License.
  */
 
-package ai.rev.streaming
+package ai.rev.streaming.models
 
 /**
  * @author shuklaalok7 (alok@clay.fish)
- * @since v0.1.0 2020-03-29 06:48 PM IST
+ * @since v0.1.0 2020-04-19 08:42 PM IST
  */
-enum class AudioContentType(val mime: String) {
-    RAW("audio/x-raw"),
-    FLAC("audio/x-flac"),
-    WAV("audio/x-wav")
-}
+data class Account(
+        val email: String,
+        val balanceSeconds: Long
+)

@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package ai.rev.streaming
+package ai.rev.streaming.models
 
 /**
  * @author shuklaalok (alok@clay.fish)
@@ -26,10 +26,17 @@ data class ClientConfig(
          */
         val accessToken: String,
         val contentType: AudioContentType,
+
         /**
          * Handle the response obtained from rev.ai
          */
         val callback: (RevAiResponse) -> Unit,
+
+        /**
+         * In case the rev.ai API needs to be changed. Do not use `http`, `https`, `ws`, or `wss` in the beginning. The
+         * protocol scheme will be added while making requests to the API server.
+         */
+        val baseUrl: String = "api.rev.ai/speechtotext/v1",
 
         /**
          * Size of the buffer in bytes to read from the input-stream passed to [RevAi.stream].

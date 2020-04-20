@@ -16,10 +16,11 @@
 
 package ai.rev.streaming
 
-import java.io.IOException
-import java.io.InputStream
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import ai.rev.streaming.ai.rev.streaming.clients.AsyncClient
+import ai.rev.streaming.ai.rev.streaming.clients.AsyncClientImpl
+import ai.rev.streaming.clients.StreamingClient
+import ai.rev.streaming.clients.StreamingClientImpl
+import ai.rev.streaming.models.ClientConfig
 
 /**
  * Entry-point for the client projects. Handles one connection at a time. To get multiple streams, create more instances
@@ -31,65 +32,10 @@ import java.util.concurrent.TimeUnit
  * @since v0.1.0 2020-03-29 18:20 IST
  */
 class RevAi constructor(private val clientConfig: ClientConfig) : AutoCloseable {
-    //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
-    private val sessionHandler: SessionHandler = SessionHandler(clientConfig)
-    private val executor = Executors.newSingleThreadExecutor()
+    val asyncClient: AsyncClient = AsyncClientImpl(clientConfig)
+    val streamingClient: StreamingClient = StreamingClientImpl(clientConfig)
 
-    /**
-     * @param audio The audio data to send to rev.ai
-     */
-    fun stream(audio: ByteArray) = sessionHandler.sendAudio(audio)
-
-    /**
-     * @param audioStream
-     * @see ClientConfig.bufferSize
-     */
-    fun stream(audioStream: InputStream) {
-        logger.debug("Creating a separate thread to handle the audio inputStream...")
-
-        executor.execute {
-            val buffer = ByteArray(clientConfig.bufferSize)
-            var bytesRead = 0
-            while (true) {
-                try {
-                    val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
-                    if (length > 0) {
-                        bytesRead += length
-                        logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
-                        stream(buffer.copyOfRange(0, length))
-                    }
-                } catch (e: IndexOutOfBoundsException) {
-                    logger.debug("File is not populated yet, waiting for it", e)
-                    Thread.sleep(1000)
-                }
-
-                if (Thread.interrupted()) {
-                    logger.warn("Terminated reading from the audio inputStream.")
-                    try {
-                        audioStream.close()
-                    } catch (e: IOException) {
-                        logger.error("Error when closing the audio inputStream.", e)
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Closes connection gracefully
-     */
     override fun close() {
-        sessionHandler.close()
-        executor.shutdown()
-        try {
-            if (!executor.awaitTermination(TIMEOUT, TimeUnit.SECONDS)) executor.shutdownNow()
-        } catch (e: InterruptedException) {
-            executor.shutdownNow()
-        }
-    }
-
-    companion object {
-        private val logger = AppUtils.getLogger<RevAi>()
-        private const val TIMEOUT = 60L // in seconds
+        streamingClient.close()
     }
 }

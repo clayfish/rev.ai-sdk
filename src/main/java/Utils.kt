@@ -16,7 +16,11 @@
 
 package ai.rev.streaming
 
+import ai.rev.streaming.models.AudioContentType
+import ai.rev.streaming.models.ClientConfig
+import ai.rev.streaming.models.RevAiResponse
 import com.google.gson.FieldNamingPolicy
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -33,7 +37,6 @@ import java.net.URI
  * @since v0.1.0 2020-03-29 06:26 PM IST
  */
 internal object NetworkUtils {
-    private const val BASE_URL = "wss://api.rev.ai/speechtotext/v1/stream"
 
     /**
      * @param sessionHandler
@@ -68,7 +71,7 @@ internal object NetworkUtils {
             fullContentType += ";layout=${if (config.params.interleaved) "interleaved" else "non-interleaved"};rate=${config.params.rate};format=${config.params.format};channels=${config.params.channels}"
         }
 
-        var url = "$BASE_URL?access_token=${config.accessToken}&content_type=$fullContentType&filter_profanity=${config.filterProfanity}"
+        var url = "wss://${config.baseUrl}/stream?access_token=${config.accessToken}&content_type=$fullContentType&filter_profanity=${config.filterProfanity}"
         if (config.metadata != null) url += "&metadata=${config.metadata}"
         if (config.customVocabularyId != null) url += "&custom_vocabulary_id=${config.customVocabularyId}"
 
@@ -86,7 +89,7 @@ internal object NetworkUtils {
 internal object AppUtils {
     inline fun <reified T> getLogger(): Logger = LoggerFactory.getLogger(T::class.java)
 
-    val gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
+    val gson: Gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
 
     /**
      * @param message   [TextMessage] received from rev.ai streaming API over the websocket

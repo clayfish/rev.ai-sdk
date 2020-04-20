@@ -4,48 +4,9 @@ Currently supports rev.ai streaming/websocket API.
 
 # How to use?
 
-Import it in your POM based project.
+[![Maven Central](https://img.shields.io/maven-central/v/in.clayfish/rev-ai-api.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22in.clayfish%22%20AND%20a:%22rev-ai-api%22)
 
-* Maven
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>in.clayfish</groupId>
-        <artifactId>rev-ai-api</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-    
-    <!-- Other dependencies -->
-    <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-stdlib-jdk8</artifactId>
-        <version>${kotlin.version}</version>
-    </dependency>
-    
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.30</version>
-    </dependency>
-
-    <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.8.6</version>
-    </dependency>
-</dependencies>
-```
-
-* Gradle
-
-```
-implementation 'in.clayfish:rev-ai-api:0.1.1'
-
-implementation `org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.71`
-implementation `org.slf4j:slf4j-api:1.7.30`
-implementation `com.google.code.gson:gson:2.8.6`
-```
+To import in various build-tools, use the import statements provided on [Maven Central](https://search.maven.org/artifact/in.clayfish/rev-ai-api/0.1.1/jar).
 
 In your Kotlin code, use it like following.
 

@@ -16,6 +16,7 @@
 
 package ai.rev.streaming
 
+import ai.rev.streaming.models.ClientConfig
 import org.springframework.web.socket.BinaryMessage
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
@@ -109,8 +110,6 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
             state.set(State.CONNECTED)
         this.session = session
     }
-
-    override fun supportsPartialMessages() = false
 
     override fun handleTransportError(session: WebSocketSession, exception: Throwable) {
         logger.error("Error occurred in socket transport", exception)
