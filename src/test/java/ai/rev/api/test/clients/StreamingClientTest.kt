@@ -14,28 +14,47 @@
    limitations under the License.
  */
 
-package ai.rev.streaming
+package ai.rev.api.test.clients
 
-import ai.rev.streaming.clients.AsyncClient
-import ai.rev.streaming.clients.AsyncClientImpl
+import ai.rev.streaming.RevAi
 import ai.rev.streaming.clients.StreamingClient
-import ai.rev.streaming.clients.StreamingClientImpl
+import ai.rev.streaming.models.AudioContentType
 import ai.rev.streaming.models.ClientConfig
+import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 
 /**
- * Entry-point for the client projects. Handles one connection at a time. To get multiple streams, create more instances
- * of it.
- *
- * @param clientConfig Configuration
- *
  * @author shuklaalok7 (alok@clay.fish)
- * @since v0.1.0 2020-03-29 18:20 IST
+ * @since v0.2.0 2020-04-21 05:07 AM IST
  */
-class RevAi constructor(clientConfig: ClientConfig) : AutoCloseable {
-    val asyncClient: AsyncClient = AsyncClientImpl(clientConfig)
-    val streamingClient: StreamingClient = StreamingClientImpl(clientConfig)
+class StreamingClientTest {
 
-    override fun close() {
+    private lateinit var streamingClient: StreamingClient
+
+    @BeforeTest
+    fun initialize() {
+        streamingClient = RevAi(ClientConfig("", AudioContentType.FLAC, {})).streamingClient
+    }
+
+    @AfterTest
+    fun cleanup() {
         streamingClient.close()
     }
+
+    @Test
+    fun testStream1() {
+
+    }
+
+    @Test
+    fun testStream2() {
+
+    }
+
+    @Test
+    fun testClose() {
+
+    }
+
 }

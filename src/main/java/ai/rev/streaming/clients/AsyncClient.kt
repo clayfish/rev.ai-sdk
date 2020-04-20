@@ -13,9 +13,17 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-package ai.rev.streaming.ai.rev.streaming.clients
+package ai.rev.streaming.clients
 
+import ai.rev.streaming.AppUtils
 import ai.rev.streaming.models.*
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+import javax.ws.rs.client.Client
+import javax.ws.rs.client.ClientBuilder
+import javax.ws.rs.client.Entity
+import javax.ws.rs.core.GenericType
+import javax.ws.rs.core.MediaType
 
 /**
  * @author shuklaalok7 (alok@clay.fish)
@@ -27,6 +35,8 @@ interface AsyncClient {
      * [Documentation](https://www.rev.ai/docs#tag/Account)
      *
      * Get the developer's account information.
+     *
+     * @return Details about the developer's account
      */
     fun getAccount(): Account?
 
@@ -44,8 +54,9 @@ interface AsyncClient {
      * @param speakerChannel    Identifies which channel of the job output to caption. Default is `null` which works
      * only for jobs with no `speaker_channels_count` provided during job submission.
      * @param format            MIME type specifying the caption output format
+     * @return String in the specified format
      */
-    fun getCaptions(id: String, speakerChannel: Int? = null, format: CaptionFormat = CaptionFormat.VTT)
+    fun getCaptions(id: String, speakerChannel: Int? = null, format: CaptionFormat = CaptionFormat.VTT): String?
 
     /**
      * [Documentation](https://www.rev.ai/docs#tag/Transcript)
@@ -60,8 +71,9 @@ interface AsyncClient {
      *
      * @param id        Rev.ai API Job Id
      * @param format    MIME type specifying the transcription output format
+     * @return The transcript // todo the transcript has JSON structure, try to put it in POJO
      */
-    fun getTranscript(id: String, format: TranscriptFormat = TranscriptFormat.JSON)
+    fun getTranscript(id: String, format: TranscriptFormat = TranscriptFormat.JSON): JSONObject?
 
     /**
      * [Documentation](https://www.rev.ai/docs#operation/GetJobById)
@@ -114,25 +126,54 @@ interface AsyncClient {
  * @author shuklaalok7 (alok@clay.fish)
  * @since v0.2.0 2020-04-19 08:46 PM IST
  */
-internal class AsyncClientImpl(private val clientConfig: ClientConfig) : AsyncClient {
-    override fun getAccount(): Account? {
-        TODO("Not yet implemented")
+internal class AsyncClientImpl(private val config: ClientConfig) : AsyncClient {
+
+    private val client: Client = ClientBuilder.newBuilder().connectTimeout(config.timeout, TimeUnit.SECONDS)
+            .readTimeout(config.timeout, TimeUnit.SECONDS).build()
+
+    override fun getAccount(): Account? = try {
+        AppUtils.createInvocation(client, "/account", config).get(Account::class.java)
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in getting account", e)
+        null
     }
 
-    override fun getCaptions(id: String, speakerChannel: Int?, format: CaptionFormat) {
-        TODO("Not yet implemented")
+    override fun getCaptions(id: String, speakerChannel: Int?, format: CaptionFormat): String? = try {
+        val invocationBuilder = if (speakerChannel == null) AppUtils.createInvocation(client, "/jobs/$id/captions", config)
+        else AppUtils.createInvocation(client, "/jobs/$id/captions", config, Pair("speaker_channel", "$speakerChannel"))
+
+        invocationBuilder.accept(format.mime).get().entity.toString()
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in getting captions for job $id", e)
+        null
     }
 
-    override fun getTranscript(id: String, format: TranscriptFormat) {
-        TODO("Not yet implemented")
+    override fun getTranscript(id: String, format: TranscriptFormat): JSONObject? = try {
+        JSONObject(AppUtils.createInvocation(client, "/jobs/$id/transcript", config).accept(format.mime)
+                .get().entity.toString())
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in getting transcript for job $id", e)
+        null
     }
 
-    override fun get(id: String): Job? {
-        TODO("Not yet implemented")
+    override fun get(id: String): Job? = try {
+        AppUtils.createInvocation(client, "/jobs/$id", config).get(Job::class.java)
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in getting job with $id", e)
+        null
     }
 
-    override fun delete(id: String): Boolean {
-        TODO("Not yet implemented")
+    override fun delete(id: String): Boolean = try {
+        val status = AppUtils.createInvocation(client, "/jobs/$id", config).delete().status
+        status in 200..299
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in deleting job with $id", e)
+        false
     }
 
     override fun getJobs(limit: Int, startingAfter: String?): List<Job> {
@@ -141,11 +182,30 @@ internal class AsyncClientImpl(private val clientConfig: ClientConfig) : AsyncCl
         if (limit1 == 0) return emptyList()
 
         // todo implement
-        return emptyList()
+        return try {
+            val queryParams = arrayListOf(Pair("limit", "$limit1"))
+            if (startingAfter != null) queryParams.add(Pair("starting_after", startingAfter))
+
+            // May need to use Jackson instead of JaxB: https://stackoverflow.com/questions/9627170/cannot-unmarshal-a-json-array-of-objects-using-jersey-client
+            AppUtils.createInvocation(client, "/jobs", config, *queryParams.toTypedArray()).get(object : GenericType<List<Job>>() {})
+        } catch (e: Exception) {
+            // todo inspect
+            logger.error("Error occurred in getting jobs", e)
+            emptyList()
+        }
     }
 
-    override fun submitJob(jobRequest: JobRequest): Job? {
-        TODO("Not yet implemented")
+    override fun submitJob(jobRequest: JobRequest): Job? = try {
+        AppUtils.createInvocation(client, "/jobs", config)
+                .post(Entity.entity(jobRequest, MediaType.APPLICATION_JSON_TYPE), Job::class.java)
+    } catch (e: Exception) {
+        // todo inspect
+        logger.error("Error occurred in submitting job", e)
+        null
+    }
+
+    companion object {
+        private val logger = AppUtils.getLogger<AsyncClientImpl>()
     }
 
 }

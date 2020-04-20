@@ -30,13 +30,18 @@ data class ClientConfig(
         /**
          * Handle the response obtained from rev.ai
          */
-        val callback: (RevAiResponse) -> Unit,
+        val callback: (StreamingResponse) -> Unit,
 
         /**
          * In case the rev.ai API needs to be changed. Do not use `http`, `https`, `ws`, or `wss` in the beginning. The
          * protocol scheme will be added while making requests to the API server.
          */
         val baseUrl: String = "api.rev.ai/speechtotext/v1",
+
+        /**
+         * Timeout when connecting with rev.ai API in seconds.
+         */
+        val timeout: Long = 60,
 
         /**
          * Size of the buffer in bytes to read from the input-stream passed to [RevAi.stream].
@@ -92,7 +97,7 @@ data class RawParameters(
  * @author shuklaalok7 (alok@clay.fish)
  * @since v0.1.0 2020-03-29 07:54 PM IST
  */
-data class RevAiResponse(
+data class StreamingResponse(
         val id: String?,
         val type: String?,
         val elements: List<Element>?,

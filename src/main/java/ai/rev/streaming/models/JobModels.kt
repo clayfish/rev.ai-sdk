@@ -148,5 +148,32 @@ data class JobRequest(
          */
         val customVocabularies: Array<String>?
 ) {
+        override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+
+                other as JobRequest
+
+                if (mediaUrl != other.mediaUrl) return false
+                if (skipDiarization != other.skipDiarization) return false
+                if (skipPunctuation != other.skipPunctuation) return false
+                if (removeDisfluencies != other.removeDisfluencies) return false
+                if (filterProfanity != other.filterProfanity) return false
+                if (speakerChannelsCount != other.speakerChannelsCount) return false
+                if (callbackUrl != other.callbackUrl) return false
+
+                return true
+        }
+
+        override fun hashCode(): Int {
+                var result = mediaUrl.hashCode()
+                result = 31 * result + (skipDiarization?.hashCode() ?: 0)
+                result = 31 * result + (skipPunctuation?.hashCode() ?: 0)
+                result = 31 * result + (removeDisfluencies?.hashCode() ?: 0)
+                result = 31 * result + (filterProfanity?.hashCode() ?: 0)
+                result = 31 * result + (speakerChannelsCount ?: 0)
+                result = 31 * result + (callbackUrl?.hashCode() ?: 0)
+                return result
+        }
 
 }

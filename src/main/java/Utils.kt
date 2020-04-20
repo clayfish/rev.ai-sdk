@@ -18,7 +18,7 @@ package ai.rev.streaming
 
 import ai.rev.streaming.models.AudioContentType
 import ai.rev.streaming.models.ClientConfig
-import ai.rev.streaming.models.RevAiResponse
+import ai.rev.streaming.models.StreamingResponse
 import com.google.gson.FieldNamingPolicy
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -30,6 +30,10 @@ import org.springframework.web.socket.WebSocketHttpHeaders
 import org.springframework.web.socket.client.WebSocketClient
 import org.springframework.web.socket.client.standard.StandardWebSocketClient
 import java.net.URI
+import java.util.*
+import javax.ws.rs.client.Client
+import javax.ws.rs.client.Invocation
+import javax.ws.rs.core.MediaType
 
 
 /**
@@ -92,8 +96,23 @@ internal object AppUtils {
     val gson: Gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
 
     /**
+     *
+     */
+    fun createInvocation(client: Client, uri: String, config: ClientConfig, vararg queryParam: Pair<String, String>): Invocation.Builder =
+            client.target("https://${config.baseUrl}$uri").apply {
+                queryParam.forEach { this.queryParam(it.first, it.second) }
+            }.request(MediaType.APPLICATION_JSON_TYPE)
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .acceptEncoding("gzip", "deflate", "sdch", "br")
+                    .acceptLanguage(Locale.US)
+                    .header("Authorization", "Bearer ${config.accessToken}")
+                    .header("Accept-Language", "en-GB,en;q=0.8,en-US;q=0.6,hi;q=0.4")
+                    .header("Connection", "keep-alive")
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36")
+
+    /**
      * @param message   [TextMessage] received from rev.ai streaming API over the websocket
      * @return Response that this library generates
      */
-    fun convertToRevAiResponse(message: TextMessage): RevAiResponse = gson.fromJson(message.payload, RevAiResponse::class.java)
+    fun convertToStreamingResponse(message: TextMessage): StreamingResponse = gson.fromJson(message.payload, StreamingResponse::class.java)
 }

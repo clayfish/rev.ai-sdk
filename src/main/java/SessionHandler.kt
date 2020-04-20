@@ -124,7 +124,7 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
     override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
         logger.info("Text message received\n$message")
         this.session = session
-        val data = AppUtils.convertToRevAiResponse(message)
+        val data = AppUtils.convertToStreamingResponse(message)
         if (state.get() == State.READY) config.callback.invoke(data)
         else if (data.type == "connected" && state.get() != State.CLOSING && state.get() != State.CLOSED) state.set(State.READY)
     }
