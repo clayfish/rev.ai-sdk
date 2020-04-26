@@ -20,7 +20,7 @@
 
     <groupId>in.clayfish</groupId>
     <artifactId>rev-ai-api</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 
     <name>rev.ai API SDK</name>
     <description>Connect to rev.ai API in an easy to use way.</description>
@@ -61,7 +61,7 @@
         <url>https://github.com/clayfish/rev.ai-sdk</url>
         <connection>scm:git:git://github.com/clayfish/rev.ai-sdk.git</connection>
         <developerConnection>scm:git:git@github.com:clayfish/rev.ai-sdk.git</developerConnection>
-        <tag>rev-ai-api-0.1.1</tag>
+        <tag>rev-ai-api-0.2.0</tag>
     </scm>
 
     <properties>
