@@ -34,10 +34,20 @@ interface StreamingClient : AutoCloseable {
     fun stream(audio: ByteArray)
 
     /**
+     * [ClientConfig.streamIdleTime] and [ClientConfig.streamStartTime] are used to control the behaviour when the
+     * audio-stream stops getting appended. If these properties are not set, it is necessary to stop the transcription
+     * by calling [close].
+     *
      * @param audioStream
+     * @param blocking If `false`, this function returns immediately and the transcription is done in a separate thread.
+     * If `true`, the function does block the current thread.
+     * the current thread.
+     *
      * @see ClientConfig.bufferSize
+     * @see ClientConfig.streamStartTime
+     * @see ClientConfig.streamIdleTime
      */
-    fun stream(audioStream: InputStream)
+    fun stream(audioStream: InputStream, blocking: Boolean = false)
 }
 
 /**
@@ -51,35 +61,11 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
 
     override fun stream(audio: ByteArray) = sessionHandler.sendAudio(audio)
 
-    override fun stream(audioStream: InputStream) {
+    override fun stream(audioStream: InputStream, blocking: Boolean) = if (blocking)
+        startStreaming(audioStream)
+    else {
         logger.debug("Creating a separate thread to handle the audio inputStream...")
-
-        executor.execute {
-            val buffer = ByteArray(clientConfig.bufferSize)
-            var bytesRead = 0
-            while (true) {
-                try {
-                    val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
-                    if (length > 0) {
-                        bytesRead += length
-                        logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
-                        stream(buffer.copyOfRange(0, length))
-                    }
-                } catch (e: IndexOutOfBoundsException) {
-                    logger.debug("File is not populated yet, waiting for it", e)
-                    Thread.sleep(1000)
-                }
-
-                if (Thread.interrupted()) {
-                    logger.warn("Terminated reading from the audio inputStream.")
-                    try {
-                        audioStream.close()
-                    } catch (e: IOException) {
-                        logger.error("Error when closing the audio inputStream.", e)
-                    }
-                }
-            }
-        }
+        executor.execute { startStreaming(audioStream) }
     }
 
     override fun close() {
@@ -92,8 +78,83 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
         }
     }
 
+    /**
+     * @param audioStream
+     */
+    private fun startStreaming(audioStream: InputStream) {
+        val buffer = ByteArray(clientConfig.bufferSize)
+        var bytesRead = 0
+        var hasStartedStreaming = false
+        var idleTime = 0L
+        while (true) {
+            try {
+                val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
+                if (length > 0) {
+                    hasStartedStreaming = true
+                    bytesRead += length
+                    logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
+                    stream(buffer.copyOfRange(0, length))
+                    idleTime = 0
+                }
+            } catch (e: IndexOutOfBoundsException) {
+                logger.debug("File is not populated yet, waiting for it", e)
+                Thread.sleep(1000)
+                idleTime += 1000
+            }
+
+            if (Thread.currentThread().isInterrupted) {
+                logger.warn("Terminated reading from the audio inputStream.")
+                try {
+                    audioStream.close()
+                    break
+                } catch (e: IOException) {
+                    logger.error("Error when closing the audio inputStream.", e)
+                }
+            }
+
+            if (toClose(idleTime, hasStartedStreaming)) {
+                // Audio Stream has stopped, clean it up
+                audioStream.close()
+                close()
+                break
+            }
+        }
+    }
+
+    /**
+     * Makes the decision to close this transcription based on the config values [ClientConfig.streamStartTime] and
+     * [ClientConfig.streamIdleTime] and current state of the audio-stream.
+     *
+     * @param idleTime              Current idle-time in milliseconds
+     * @param hasStartedStreaming   If any bytes have been read from the audio-stream
+     */
+    private fun toClose(idleTime: Long, hasStartedStreaming: Boolean): Boolean {
+        if (idleTime == 0L) return false
+
+        var idleStreamTime = clientConfig.streamIdleTime ?: 0L
+        var streamStartTime = clientConfig.streamStartTime ?: 0L
+
+        return when {
+            idleStreamTime > 0 && streamStartTime > 0 ->
+                if (hasStartedStreaming) idleTime > idleStreamTime else idleTime > streamStartTime
+
+            idleStreamTime > 0 -> {
+                streamStartTime = idleStreamTime * START_TIME_MULTIPLIER
+                if (hasStartedStreaming) idleTime > idleStreamTime else idleTime > streamStartTime
+            }
+
+            streamStartTime > 0 -> {
+                idleStreamTime = streamStartTime / START_TIME_MULTIPLIER
+                if (hasStartedStreaming) idleTime > idleStreamTime else idleTime > streamStartTime
+            }
+
+            else -> false
+        }
+    }
+
     companion object {
         private val logger = AppUtils.getLogger<StreamingClient>()
         private const val TIMEOUT = 60L // in seconds
+        private const val START_TIME_MULTIPLIER = 6
     }
 }

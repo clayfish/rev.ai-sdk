@@ -20,10 +20,8 @@ import ai.rev.streaming.RevAi
 import ai.rev.streaming.clients.AsyncClient
 import ai.rev.streaming.models.AudioContentType
 import ai.rev.streaming.models.ClientConfig
-import ai.rev.streaming.models.JobRequest
 import org.junit.Test
 import kotlin.test.BeforeTest
-import kotlin.test.assertNotNull
 
 /**
  * @author shuklaalok7 (alok@clay.fish)
@@ -35,43 +33,45 @@ class AsyncClientTest {
 
     @BeforeTest
     fun initialize() {
+        // todo Find a way to keep access-token secured, without putting it into VCS
         asyncClient = RevAi(ClientConfig("", AudioContentType.FLAC, {})).asyncClient
     }
 
     @Test
     fun testGetAccount() {
-
+        // todo implement
     }
 
     @Test
     fun testGetCaptions() {
-
+        // todo implement
     }
 
     @Test
     fun testGetTranscript() {
-
+        // todo implement
     }
 
     @Test
     fun testGet() {
-
+        // todo implement
     }
 
     @Test
     fun testDelete() {
-
+        // todo implement
     }
 
     @Test
     fun testGetJobs() {
-
+        // todo implement
     }
 
     @Test
     fun testSubmitJob() {
-        assertNotNull(asyncClient.submitJob(JobRequest("", speakerChannelsCount = null, callbackUrl = null,
-                customVocabularies = null)))
+        // todo implement
+//        assertNotNull(asyncClient.submitJob(JobRequest("", speakerChannelsCount = null, callbackUrl = null,
+//                customVocabularies = null)))
     }
 
 }

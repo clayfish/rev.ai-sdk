@@ -78,7 +78,7 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
                 }
 
                 // fixme see if it should break when the state is CLOSING or CLOSED
-                if (Thread.interrupted()) {
+                if (Thread.currentThread().isInterrupted) {
                     logger.debug("Thread streaming data to rev.ai is interrupted.")
                     break
                 }

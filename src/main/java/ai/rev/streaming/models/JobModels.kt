@@ -99,6 +99,24 @@ data class JobRequest(
         val mediaUrl: String,
 
         /**
+         * Integer 1 to 8, including boundaries. Use to specify the total number of unique speaker channels in the audio.
+         *
+         * Given the number of audio channels provided, each channel will be transcribed separately and the channel id
+         * assigned to the speaker label. The final output will be a combination of all individual channel outputs.
+         * Overlapping monologues will have ordering broken by the order in which the first spoken element of each
+         * monologue occurs. If speaker_channels_count is greater than the actual channels in the audio, the job will
+         * fail with invalid_media.
+         *
+         * **Note:** The amount charged will be the duration of the file multiplied by the number of channels specified.
+         */
+        val speakerChannelsCount: Int? = null,
+
+        /**
+         * Optional callback url to invoke when processing is complete
+         */
+        val callbackUrl: String? = null,
+
+        /**
          * Specify if speaker diarization will be skipped by the speech engine
          */
         val skipDiarization: Boolean? = false,
@@ -123,57 +141,10 @@ data class JobRequest(
         val filterProfanity: Boolean? = false,
 
         /**
-         * Integer 1 to 8, including boundaries. Use to specify the total number of unique speaker channels in the audio.
-         *
-         * Given the number of audio channels provided, each channel will be transcribed separately and the channel id
-         * assigned to the speaker label. The final output will be a combination of all individual channel outputs.
-         * Overlapping monologues will have ordering broken by the order in which the first spoken element of each
-         * monologue occurs. If speaker_channels_count is greater than the actual channels in the audio, the job will
-         * fail with invalid_media.
-         *
-         * **Note:** The amount charged will be the duration of the file multiplied by the number of channels specified.
-         */
-        val speakerChannelsCount: Int?,
-
-        /**
-         * Optional callback url to invoke when processing is complete
-         */
-        val callbackUrl: String?,
-
-        /**
          * Array of objects [ 1 .. 50 ] items
          * metadata
          * string <= 512 characters Nullable
          * Optional metadata that was provided during submission
          */
-        val customVocabularies: Array<String>?
-) {
-        override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (javaClass != other?.javaClass) return false
-
-                other as JobRequest
-
-                if (mediaUrl != other.mediaUrl) return false
-                if (skipDiarization != other.skipDiarization) return false
-                if (skipPunctuation != other.skipPunctuation) return false
-                if (removeDisfluencies != other.removeDisfluencies) return false
-                if (filterProfanity != other.filterProfanity) return false
-                if (speakerChannelsCount != other.speakerChannelsCount) return false
-                if (callbackUrl != other.callbackUrl) return false
-
-                return true
-        }
-
-        override fun hashCode(): Int {
-                var result = mediaUrl.hashCode()
-                result = 31 * result + (skipDiarization?.hashCode() ?: 0)
-                result = 31 * result + (skipPunctuation?.hashCode() ?: 0)
-                result = 31 * result + (removeDisfluencies?.hashCode() ?: 0)
-                result = 31 * result + (filterProfanity?.hashCode() ?: 0)
-                result = 31 * result + (speakerChannelsCount ?: 0)
-                result = 31 * result + (callbackUrl?.hashCode() ?: 0)
-                return result
-        }
-
-}
+        val customVocabularies: List<String>? = null
+)

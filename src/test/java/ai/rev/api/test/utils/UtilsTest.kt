@@ -16,7 +16,11 @@
 
 package ai.rev.api.test.utils
 
+import ai.rev.streaming.AppUtils
+import ai.rev.streaming.models.StreamingResponse
 import org.junit.Test
+import org.springframework.web.socket.TextMessage
+import kotlin.test.assertEquals
 
 /**
  * @author shuklaalok7 (alok@clay.fish)
@@ -31,7 +35,15 @@ class UtilsTest {
 
     @Test
     fun testConvertToStreamingResponse() {
+        val expectedResponse = StreamingResponse("qwe", "async",
+                listOf(StreamingResponse.Element("final", "This is element 1.", 0.0, 1.0, 50.0),
+                        StreamingResponse.Element("partial", "This is element 2.", 1.1, 2.0, 60.0),
+                        StreamingResponse.Element("final", "This is element 1.", 2.1, 3.0, 70.0)),
+                0.0, 3.0)
 
+        val response = AppUtils.convertToStreamingResponse(TextMessage(AppUtils.gson.toJson(expectedResponse), true))
+
+        assertEquals(expectedResponse, response)
     }
 
     @Test

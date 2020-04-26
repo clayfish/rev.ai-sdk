@@ -66,7 +66,19 @@ data class ClientConfig(
         /**
          * Default is `false`. Profane words will use asterisks.
          */
-        val filterProfanity: Boolean = false
+        val filterProfanity: Boolean = false,
+
+        /**
+         * In milliseconds. While the streaming is in-progress, if the audio-file length does not increase even a bit in
+         * these many consecutive seconds, the streaming wil be considered complete.
+         */
+        val streamIdleTime: Long? = null,
+
+        /**
+         * In seconds. If the audio-file does not get started populating in these many consecutive seconds, the
+         * streaming wil be considered complete.
+         */
+        val streamStartTime: Long? = null
 )
 
 /**
@@ -104,7 +116,6 @@ data class StreamingResponse(
         val ts: Double?,
         val endTs: Double?
 ) {
-    companion object {
         /**
          * @author shuklaalok7 (alok@clay.fish)
          * @since v0.1.0 2020-03-29 09:06 PM IST
@@ -116,5 +127,4 @@ data class StreamingResponse(
                 val endTs: Double?,
                 val confidence: Double?
         )
-    }
 }

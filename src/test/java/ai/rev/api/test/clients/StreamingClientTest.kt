@@ -39,7 +39,7 @@ class StreamingClientTest {
 
     @AfterTest
     fun cleanup() {
-        streamingClient.close()
+//        streamingClient.close()
     }
 
     @Test
