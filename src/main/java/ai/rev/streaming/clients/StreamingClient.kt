@@ -17,6 +17,7 @@ package ai.rev.streaming.clients
 
 import ai.rev.streaming.AppUtils
 import ai.rev.streaming.SessionHandler
+import ai.rev.streaming.WebsocketManager
 import ai.rev.streaming.models.ClientConfig
 import java.io.IOException
 import java.io.InputStream
@@ -56,10 +57,10 @@ interface StreamingClient : AutoCloseable {
  */
 internal class StreamingClientImpl(private val clientConfig: ClientConfig) : StreamingClient {
     //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
-    private val sessionHandler: SessionHandler = SessionHandler(clientConfig)
+    private val websocket: WebsocketManager = SessionHandler(clientConfig)
     private val executor = Executors.newSingleThreadExecutor()
 
-    override fun stream(audio: ByteArray) = sessionHandler.sendAudio(audio)
+    override fun stream(audio: ByteArray) = websocket.sendAudio(audio)
 
     override fun stream(audioStream: InputStream, blocking: Boolean) = if (blocking)
         startStreaming(audioStream)
@@ -69,7 +70,7 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
     }
 
     override fun close() {
-        sessionHandler.close()
+        websocket.close()
         executor.shutdown()
         try {
             if (!executor.awaitTermination(TIMEOUT, TimeUnit.SECONDS)) executor.shutdownNow()
@@ -95,6 +96,10 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
                     logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
                     stream(buffer.copyOfRange(0, length))
                     idleTime = 0
+                } else {
+                    // No audio has been generated, wait a little
+                    Thread.sleep(1000)
+                    idleTime += 1000
                 }
             } catch (e: IndexOutOfBoundsException) {
                 logger.debug("File is not populated yet, waiting for it", e)

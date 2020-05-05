@@ -13,42 +13,45 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-
 package ai.rev.streaming
 
+import ai.rev.streaming.WebsocketManager.State
 import ai.rev.streaming.models.ClientConfig
 import ai.rev.streaming.models.StreamingResponse
-import org.springframework.web.socket.BinaryMessage
 import org.springframework.web.socket.TextMessage
-import org.springframework.web.socket.WebSocketSession
-import org.springframework.web.socket.handler.TextWebSocketHandler
-import java.io.IOException
+import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import ai.rev.streaming.WebsocketManager.State
+import javax.websocket.*
 
 /**
- * Depends on Spring Websocket
+ * Taken from [StackOverflow](https://stackoverflow.com/a/26454417/6860171)
  *
  * @author shuklaalok7 (alok@clay.fish)
- * @since v0.1.0 2020-03-29 07:18 PM IST
+ * @since v0.2.1 2020-05-05 05:22 AM IST
  */
-internal class SessionHandler(private val config: ClientConfig) : TextWebSocketHandler(), WebsocketManager {
-    /**
-     * Once the handshake done, rev.ai sends a text-message saying "connected", only then it's ready to take the streams
-     * from client.
-     */
-    private var state: AtomicReference<WebsocketManager.State> = AtomicReference(State.IDLE)
+@ClientEndpoint
+class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManager {
+    private var state: AtomicReference<State> = AtomicReference(State.IDLE)
     private val audioQueue: Queue<ByteArray> = ConcurrentLinkedQueue()
     private val callbacks = arrayListOf(config.callback)
     private val executor = Executors.newSingleThreadExecutor()
+    var session: Session? = null
 
-    // Experimental
-    var initialSession: WebSocketSession? = null
-    private var session: WebSocketSession? = null
+    private fun connect() {
+        if (state.get() != State.CLOSING && state.get() != State.CLOSED)
+            state.set(State.CONNECTING)
+        try {
+            val container = ContainerProvider.getWebSocketContainer()
+            session = container.connectToServer(this, NetworkUtils.createURI(config))
+            startExecutor()
+        } catch (e: Exception) {
+            logger.error("Could not connect to Rev.ai websocket.", e)
+        }
+    }
 
     private val task = Runnable {
         logger.debug("Current state: $state")
@@ -69,22 +72,15 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
                 val audio = audioQueue.peek()
                 if (session?.isOpen == true) {
                     logger.debug("Session is open, streaming audio...")
-                    session?.sendMessage(BinaryMessage(audio))
+                    session?.asyncRemote?.sendBinary(ByteBuffer.wrap(audio))
                     // Remove this element from the queue
                     audioQueue.poll()
                 } else {
                     logger.error("Session closed. Retrying...")
-
-                    if (initialSession?.isOpen == true) {
-                        logger.debug("Session is open, streaming audio...")
-                        initialSession?.sendMessage(BinaryMessage(audio))
-                    } else {
-                        logger.error("Initial session is also closed. Retrying...")
-                        if (state.get() != State.CLOSING && state.get() != State.CLOSED)
-                            state.set(State.DISCONNECTED)
-                        startExecutor()
-                        return@Runnable
-                    }
+                    if (state.get() != State.CLOSING && state.get() != State.CLOSED)
+                        state.set(State.DISCONNECTED)
+                    startExecutor()
+                    return@Runnable
                 }
 
                 // fixme see if it should break when the state is CLOSING or CLOSED
@@ -96,10 +92,7 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
 
             State.CLOSING -> if (audioQueue.isEmpty()) {
                 logger.debug("Audio queue is empty. All the data has been streamed to rev.ai.")
-                when {
-                    session?.isOpen == true -> session?.sendMessage(TextMessage("EOS"))
-                    initialSession?.isOpen == true -> initialSession?.sendMessage(TextMessage("EOS"))
-                }
+                if (session?.isOpen == true) session?.asyncRemote?.sendText("EOS")
                 state.set(State.CLOSED)
                 startExecutor()
             }
@@ -108,29 +101,48 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
         }
     }
 
-    override fun afterConnectionEstablished(session: WebSocketSession) {
-        logger.info("Connection established")
+    /**
+     * Callback hook for Connection open events.
+     *
+     * @param userSession the userSession which is opened.
+     */
+    @OnOpen
+    fun onOpen(userSession: Session?) {
+        println("opening websocket")
+        session = userSession
         if (state.get() != State.CLOSING && state.get() != State.CLOSED)
             state.set(State.CONNECTED)
-        this.session = session
     }
 
-    override fun handleTransportError(session: WebSocketSession, exception: Throwable) {
-        logger.error("Error occurred in socket transport", exception)
-        this.session = session
+    /**
+     * Callback hook for Connection close events.
+     *
+     * @param userSession the userSession which is getting closed.
+     * @param reason the reason for connection close
+     */
+    @OnClose
+    fun onClose(userSession: Session?, reason: CloseReason?) {
+        println("closing websocket: ${reason?.reasonPhrase}")
+        session = null
     }
 
-    override fun handleBinaryMessage(session: WebSocketSession, message: BinaryMessage) {
-        logger.info("Binary message received")
-        this.session = session
-    }
-
-    override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
+    /**
+     * Callback hook for Message Events. This method will be invoked when a client send a message.
+     *
+     * @param message The text message
+     */
+    @OnMessage
+    fun onMessage(message: String?, userSession: Session?) {
         logger.info("Text message received\n$message")
-        this.session = session
-        val data = AppUtils.convertToStreamingResponse(message)
-        if (state.get() == State.READY) callbacks.forEach { it.invoke(data) }
-        else if (data.type == "connected" && state.get() != State.CLOSING && state.get() != State.CLOSED) state.set(State.READY)
+        this.session = userSession
+        if (!message.isNullOrBlank()) {
+            val data = AppUtils.convertToStreamingResponse(TextMessage(message))
+            if (state.get() == State.READY)
+                callbacks.forEach { it.invoke(data) }
+            else if (data.type == "connected" && state.get() != State.CLOSING
+                    && state.get() != State.CLOSED)
+                state.set(State.READY)
+        }
     }
 
     override fun addCallback(callback: (StreamingResponse) -> Unit) = callbacks.add(callback)
@@ -145,16 +157,10 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
         } else logger.warn("RevAi client is closing down, cannot stream any more audio-data.")
     }
 
-    private fun startExecutor(): Unit = executor.execute(task)
+//    override fun sendAudio(audio: ByteArray) {
+//        session?.asyncRemote?.sendBinary(ByteBuffer.wrap(audio))
+//    }
 
-    private fun connect() {
-        if (state.get() != State.CLOSING && state.get() != State.CLOSED)
-            state.set(State.CONNECTING)
-        NetworkUtils.handshake(this, config)
-        startExecutor()
-    }
-
-    @Throws(IOException::class)
     override fun close() {
         state.set(State.CLOSING)
 
@@ -164,15 +170,16 @@ internal class SessionHandler(private val config: ClientConfig) : TextWebSocketH
             executor.shutdown()
             try {
                 if (!executor.awaitTermination(TIMEOUT, TimeUnit.MINUTES)) executor.shutdownNow()
-                state.set(State.CLOSED)
             } catch (e: InterruptedException) {
                 executor.shutdownNow()
             }
         }.start()
     }
 
+    private fun startExecutor(): Unit = executor.execute(task)
+
     companion object {
-        private val logger = AppUtils.getLogger<SessionHandler>()
+        private val logger = AppUtils.getLogger<WebsocketClientEndpoint>()
         private const val TIMEOUT = 2L // in minutes
     }
 

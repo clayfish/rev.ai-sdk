@@ -49,7 +49,7 @@ internal object NetworkUtils {
     fun handshake(sessionHandler: SessionHandler, config: ClientConfig) {
         val client: WebSocketClient = StandardWebSocketClient()
 
-        val uri = URI(createUrl(config))
+        val uri = createURI(config)
         val headers = HttpHeaders()
         headers["host"] = uri.host
         headers["upgrade"] = "websocket"
@@ -67,8 +67,7 @@ internal object NetworkUtils {
     /**
      *
      */
-    private fun createUrl(config: ClientConfig): String {
-
+     fun createURI(config: ClientConfig): URI {
         var fullContentType = config.contentType.mime
         if (config.contentType == AudioContentType.RAW) {
             if (config.params == null) throw IllegalArgumentException("params cannot be null with $fullContentType.")
@@ -80,7 +79,7 @@ internal object NetworkUtils {
         if (config.customVocabularyId != null) url += "&custom_vocabulary_id=${config.customVocabularyId}"
 
         logger.info("Full URL: $url")
-        return url
+        return URI(url)
     }
 
     private val logger = AppUtils.getLogger<NetworkUtils>()
