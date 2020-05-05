@@ -16,7 +16,6 @@
 package ai.rev.streaming.clients
 
 import ai.rev.streaming.AppUtils
-import ai.rev.streaming.SessionHandler
 import ai.rev.streaming.WebsocketClientEndpoint
 import ai.rev.streaming.WebsocketManager
 import ai.rev.streaming.models.ClientConfig
@@ -49,6 +48,7 @@ interface StreamingClient : AutoCloseable {
      * @see ClientConfig.streamStartTime
      * @see ClientConfig.streamIdleTime
      */
+    @Throws(InterruptedException::class)
     fun stream(audioStream: InputStream, blocking: Boolean = false)
 }
 
@@ -58,16 +58,13 @@ interface StreamingClient : AutoCloseable {
  */
 internal class StreamingClientImpl(private val clientConfig: ClientConfig) : StreamingClient {
     //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
-    private val websocket: WebsocketManager =
-            if (clientConfig.useJavaxWebsocket)
-                WebsocketClientEndpoint(clientConfig)
-            else
-                SessionHandler(clientConfig)
+    private val websocket: WebsocketManager = WebsocketClientEndpoint(clientConfig)
 
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun stream(audio: ByteArray) = websocket.sendAudio(audio)
 
+    @Throws(InterruptedException::class)
     override fun stream(audioStream: InputStream, blocking: Boolean) = if (blocking)
         startStreaming(audioStream)
     else {
@@ -88,47 +85,48 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
     /**
      * @param audioStream
      */
+    @Throws(InterruptedException::class)
     private fun startStreaming(audioStream: InputStream) {
         val buffer = ByteArray(clientConfig.bufferSize)
         var bytesRead = 0
         var hasStartedStreaming = false
         var idleTime = 0L
-        while (true) {
-            try {
-                val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
-                if (length > 0) {
-                    hasStartedStreaming = true
-                    bytesRead += length
-                    logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
-                    stream(buffer.copyOfRange(0, length))
-                    idleTime = 0
-                } else {
-                    // No audio has been generated, wait a little
+        try {
+            while (true) {
+                try {
+                    val length = audioStream.read(buffer, 0, clientConfig.bufferSize)
+                    if (length > 0) {
+                        hasStartedStreaming = true
+                        bytesRead += length
+                        logger.debug("Read bytes from audio input-stream: $length\t Total bytes read: $bytesRead")
+                        stream(buffer.copyOfRange(0, length))
+                        idleTime = 0
+                    } else {
+                        // No audio has been generated, wait a little
+                        Thread.sleep(1000)
+                        idleTime += 1000
+                    }
+                } catch (e: IndexOutOfBoundsException) {
+                    logger.debug("File is not populated yet, waiting for it", e)
                     Thread.sleep(1000)
                     idleTime += 1000
                 }
-            } catch (e: IndexOutOfBoundsException) {
-                logger.debug("File is not populated yet, waiting for it", e)
-                Thread.sleep(1000)
-                idleTime += 1000
-            }
 
-            if (Thread.currentThread().isInterrupted) {
-                logger.warn("Terminated reading from the audio inputStream.")
-                try {
+                if (toClose(idleTime, hasStartedStreaming)) {
+                    // Audio Stream has stopped, clean it up
                     audioStream.close()
+                    close()
                     break
-                } catch (e: IOException) {
-                    logger.error("Error when closing the audio inputStream.", e)
                 }
             }
-
-            if (toClose(idleTime, hasStartedStreaming)) {
-                // Audio Stream has stopped, clean it up
+        } catch (e: InterruptedException) {
+            logger.warn("Terminated reading from the audio inputStream.")
+            try {
                 audioStream.close()
-                close()
-                break
+            } catch (e: IOException) {
+                logger.error("Error when closing the audio inputStream.", e)
             }
+            Thread.currentThread().interrupt()
         }
     }
 

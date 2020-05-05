@@ -24,11 +24,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpHeaders
-import org.springframework.web.socket.TextMessage
-import org.springframework.web.socket.WebSocketHttpHeaders
-import org.springframework.web.socket.client.WebSocketClient
-import org.springframework.web.socket.client.standard.StandardWebSocketClient
 import java.net.URI
 import java.util.*
 import javax.ws.rs.client.Client
@@ -43,31 +38,9 @@ import javax.ws.rs.core.MediaType
 internal object NetworkUtils {
 
     /**
-     * @param sessionHandler
-     * @param config
-     */
-    fun handshake(sessionHandler: SessionHandler, config: ClientConfig) {
-        val client: WebSocketClient = StandardWebSocketClient()
-
-        val uri = createURI(config)
-        val headers = HttpHeaders()
-        headers["host"] = uri.host
-        headers["upgrade"] = "websocket"
-        headers["connection"] = "upgrade"
-
-        client.doHandshake(sessionHandler, WebSocketHttpHeaders(headers), uri).addCallback({
-            logger.info("Handshake successful. Waiting for the server to get ready.")
-            sessionHandler.initialSession = it
-        }, {
-            // todo Maybe retry
-            logger.error("Error in handshake. Please retry connecting to rev.ai again", it)
-        })
-    }
-
-    /**
      *
      */
-     fun createURI(config: ClientConfig): URI {
+    fun createURI(config: ClientConfig): URI {
         var fullContentType = config.contentType.mime
         if (config.contentType == AudioContentType.RAW) {
             if (config.params == null) throw IllegalArgumentException("params cannot be null with $fullContentType.")
@@ -110,8 +83,8 @@ internal object AppUtils {
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36")
 
     /**
-     * @param message   [TextMessage] received from rev.ai streaming API over the websocket
+     * @param message   Received from rev.ai streaming API over the websocket
      * @return Response that this library generates
      */
-    fun convertToStreamingResponse(message: TextMessage): StreamingResponse = gson.fromJson(message.payload, StreamingResponse::class.java)
+    fun convertToStreamingResponse(message: String): StreamingResponse = gson.fromJson(message, StreamingResponse::class.java)
 }

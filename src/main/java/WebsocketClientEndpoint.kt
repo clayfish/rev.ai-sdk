@@ -18,7 +18,6 @@ package ai.rev.streaming
 import ai.rev.streaming.WebsocketManager.State.*
 import ai.rev.streaming.models.ClientConfig
 import ai.rev.streaming.models.StreamingResponse
-import org.springframework.web.socket.TextMessage
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -82,12 +81,7 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
                     startExecutor()
                     return@Runnable
                 }
-
                 // fixme see if it should break when the state is CLOSING or CLOSED
-                if (Thread.currentThread().isInterrupted) {
-                    logger.debug("Thread streaming data to rev.ai is interrupted.")
-                    break
-                }
             }
 
             CLOSING -> if (audioQueue.isEmpty()) {
@@ -136,7 +130,7 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
         logger.info("Text message received\n$message")
         this.session = userSession
         if (!message.isNullOrBlank()) {
-            val data = AppUtils.convertToStreamingResponse(TextMessage(message))
+            val data = AppUtils.convertToStreamingResponse(message)
             if (state.get() == READY)
                 callbacks.forEach { it.invoke(data) }
             else if (data.type == "connected" && state.get() != CLOSING && state.get() != CLOSED)

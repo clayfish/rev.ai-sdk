@@ -15,7 +15,8 @@
    limitations under the License.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>in.clayfish</groupId>
@@ -25,6 +26,12 @@
     <name>rev.ai API SDK</name>
     <description>Connect to rev.ai API in an easy to use way.</description>
     <url>https://github.com/clayfish/rev.ai-sdk</url>
+    <inceptionYear>2020</inceptionYear>
+    <organization>
+        <name>ClayFish Technologies</name>
+        <url>https://clay.fish</url>
+    </organization>
+
     <issueManagement>
         <system>GitHub Issues</system>
         <url>https://github.com/clayfish/rev.ai-sdk/issues</url>
@@ -92,17 +99,6 @@
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-websocket</artifactId>
-            <version>5.2.5.RELEASE</version>
-        </dependency>
-
-        <!--        <dependency>-->
-        <!--            <groupId>org.springframework</groupId>-->
-        <!--            <artifactId>spring-messaging</artifactId>-->
-        <!--        </dependency>-->
 
         <dependency>
             <groupId>org.slf4j</groupId>
