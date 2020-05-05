@@ -17,6 +17,7 @@ package ai.rev.streaming.clients
 
 import ai.rev.streaming.AppUtils
 import ai.rev.streaming.SessionHandler
+import ai.rev.streaming.WebsocketClientEndpoint
 import ai.rev.streaming.WebsocketManager
 import ai.rev.streaming.models.ClientConfig
 import java.io.IOException
@@ -57,7 +58,12 @@ interface StreamingClient : AutoCloseable {
  */
 internal class StreamingClientImpl(private val clientConfig: ClientConfig) : StreamingClient {
     //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
-    private val websocket: WebsocketManager = SessionHandler(clientConfig)
+    private val websocket: WebsocketManager =
+            if (clientConfig.useJavaxWebsocket)
+                WebsocketClientEndpoint(clientConfig)
+            else
+                SessionHandler(clientConfig)
+
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun stream(audio: ByteArray) = websocket.sendAudio(audio)

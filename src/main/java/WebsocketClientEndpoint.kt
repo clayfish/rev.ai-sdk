@@ -15,7 +15,7 @@
  */
 package ai.rev.streaming
 
-import ai.rev.streaming.WebsocketManager.State
+import ai.rev.streaming.WebsocketManager.State.*
 import ai.rev.streaming.models.ClientConfig
 import ai.rev.streaming.models.StreamingResponse
 import org.springframework.web.socket.TextMessage
@@ -35,15 +35,15 @@ import javax.websocket.*
  */
 @ClientEndpoint
 class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManager {
-    private var state: AtomicReference<State> = AtomicReference(State.IDLE)
+    private var state: AtomicReference<WebsocketManager.State> = AtomicReference(IDLE)
     private val audioQueue: Queue<ByteArray> = ConcurrentLinkedQueue()
     private val callbacks = arrayListOf(config.callback)
     private val executor = Executors.newSingleThreadExecutor()
     var session: Session? = null
 
     private fun connect() {
-        if (state.get() != State.CLOSING && state.get() != State.CLOSED)
-            state.set(State.CONNECTING)
+        if (state.get() != CLOSING && state.get() != CLOSED)
+            state.set(CONNECTING)
         try {
             val container = ContainerProvider.getWebSocketContainer()
             session = container.connectToServer(this, NetworkUtils.createURI(config))
@@ -56,19 +56,19 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
     private val task = Runnable {
         logger.debug("Current state: $state")
         when (state.get()!!) {
-            State.IDLE, State.DISCONNECTED -> {
+            IDLE, DISCONNECTED -> {
                 logger.debug("Trying to connect/reconnect with rev.ai...")
                 connect()
                 startExecutor()
             }
 
-            State.CONNECTING, State.CONNECTED -> {
+            CONNECTING, CONNECTED -> {
                 logger.debug("Will start streaming soon...")
                 Thread.sleep(500)
                 startExecutor()
             }
 
-            State.READY -> while (audioQueue.isNotEmpty()) {
+            READY -> while (audioQueue.isNotEmpty()) {
                 val audio = audioQueue.peek()
                 if (session?.isOpen == true) {
                     logger.debug("Session is open, streaming audio...")
@@ -77,8 +77,8 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
                     audioQueue.poll()
                 } else {
                     logger.error("Session closed. Retrying...")
-                    if (state.get() != State.CLOSING && state.get() != State.CLOSED)
-                        state.set(State.DISCONNECTED)
+                    if (state.get() != CLOSING && state.get() != CLOSED)
+                        state.set(DISCONNECTED)
                     startExecutor()
                     return@Runnable
                 }
@@ -90,14 +90,14 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
                 }
             }
 
-            State.CLOSING -> if (audioQueue.isEmpty()) {
+            CLOSING -> if (audioQueue.isEmpty()) {
                 logger.debug("Audio queue is empty. All the data has been streamed to rev.ai.")
                 if (session?.isOpen == true) session?.asyncRemote?.sendText("EOS")
-                state.set(State.CLOSED)
+                state.set(CLOSED)
                 startExecutor()
             }
 
-            State.CLOSED -> return@Runnable
+            CLOSED -> return@Runnable
         }
     }
 
@@ -110,8 +110,8 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
     fun onOpen(userSession: Session?) {
         println("opening websocket")
         session = userSession
-        if (state.get() != State.CLOSING && state.get() != State.CLOSED)
-            state.set(State.CONNECTED)
+        if (state.get() != CLOSING && state.get() != CLOSED)
+            state.set(CONNECTED)
     }
 
     /**
@@ -137,11 +137,10 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
         this.session = userSession
         if (!message.isNullOrBlank()) {
             val data = AppUtils.convertToStreamingResponse(TextMessage(message))
-            if (state.get() == State.READY)
+            if (state.get() == READY)
                 callbacks.forEach { it.invoke(data) }
-            else if (data.type == "connected" && state.get() != State.CLOSING
-                    && state.get() != State.CLOSED)
-                state.set(State.READY)
+            else if (data.type == "connected" && state.get() != CLOSING && state.get() != CLOSED)
+                state.set(READY)
         }
     }
 
@@ -150,7 +149,7 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
     override fun clearCallbacks() = callbacks.clear()
 
     override fun sendAudio(audio: ByteArray) {
-        if (state.get() != State.CLOSING && state.get() != State.CLOSED) {
+        if (state.get() != CLOSING && state.get() != CLOSED) {
             logger.debug("Adding given audio bytes to the queue...")
             audioQueue.offer(audio)
             startExecutor()
@@ -162,10 +161,10 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
 //    }
 
     override fun close() {
-        state.set(State.CLOSING)
+        state.set(CLOSING)
 
         Thread {
-            while (state.get() != State.CLOSED) Thread.sleep(2000)
+            while (state.get() != CLOSED) Thread.sleep(2000)
 
             executor.shutdown()
             try {

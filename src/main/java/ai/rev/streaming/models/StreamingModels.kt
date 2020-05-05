@@ -78,7 +78,12 @@ data class ClientConfig(
          * In seconds. If the audio-file does not get started populating in these many consecutive seconds, the
          * streaming wil be considered complete.
          */
-        val streamStartTime: Long? = null
+        val streamStartTime: Long? = null,
+
+        /**
+         * Temporary. If `false` will use spring-websocket.
+         */
+        val useJavaxWebsocket: Boolean = true
 )
 
 /**
