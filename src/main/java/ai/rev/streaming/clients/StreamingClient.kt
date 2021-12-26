@@ -59,7 +59,6 @@ interface StreamingClient : AutoCloseable {
 internal class StreamingClientImpl(private val clientConfig: ClientConfig) : StreamingClient {
     //    private var sessionHandlers = ConcurrentHashMap<String, SessionHandler>()
     private val websocket: WebsocketManager = WebsocketClientEndpoint(clientConfig)
-
     private val executor = Executors.newSingleThreadExecutor()
 
     override fun stream(audio: ByteArray) = websocket.sendAudio(audio)
@@ -79,6 +78,7 @@ internal class StreamingClientImpl(private val clientConfig: ClientConfig) : Str
             if (!executor.awaitTermination(TIMEOUT, TimeUnit.SECONDS)) executor.shutdownNow()
         } catch (e: InterruptedException) {
             executor.shutdownNow()
+            Thread.currentThread().interrupt()
         }
     }
 

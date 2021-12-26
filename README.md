@@ -6,7 +6,7 @@ Currently supports rev.ai streaming/websocket API.
 
 [![Maven Central](https://img.shields.io/maven-central/v/in.clayfish/rev-ai-api.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22in.clayfish%22%20AND%20a:%22rev-ai-api%22)
 
-To import in various build-tools, use the import statements provided on [Maven Central](https://search.maven.org/artifact/in.clayfish/rev-ai-api/0.1.1/jar).
+To import in various build-tools, use the import statements provided on [Maven Central](https://search.maven.org/artifact/in.clayfish/rev-ai-api/0.2.1/jar).
 
 In your Kotlin code, use it like following.
 

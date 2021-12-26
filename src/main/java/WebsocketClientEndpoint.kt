@@ -82,6 +82,10 @@ class WebsocketClientEndpoint(private val config: ClientConfig) : WebsocketManag
                     return@Runnable
                 }
                 // fixme see if it should break when the state is CLOSING or CLOSED
+                if (Thread.currentThread().isInterrupted) {
+                    logger.debug("Thread streaming data to rev.ai is interrupted.")
+                    break
+                }
             }
 
             CLOSING -> if (audioQueue.isEmpty()) {

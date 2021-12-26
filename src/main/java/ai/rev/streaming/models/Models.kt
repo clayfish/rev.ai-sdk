@@ -24,3 +24,14 @@ data class Account(
         val email: String,
         val balanceSeconds: Long
 )
+
+/**
+ * @param start The timestamp of the beginning of the segment relative to the beginning of the audio in seconds
+ * with centisecond precision.
+ * @param end The timestamp of the end of the segment relative to the beginning of the audio in seconds with
+ * centisecond precision.
+ *
+ * @author shuklaalok7 (alok@clay.fish)
+ * @since v0.2.2 2021-12-26 10:12 PM IST
+ */
+data class Segment (val start: Float, val end: Float)
